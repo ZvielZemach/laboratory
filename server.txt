@@ -1,0 +1,336 @@
+const express = require('express')
+const app = express();
+
+const bp = require('body-parser')
+const db = require('mongoose');
+
+app.use(express.static('newapp/build'))
+
+app.use(bp.urlencoded({extended:false}))
+app.use(bp.json())
+
+db.connect('mongodb+srv://zviel:tet8C57MHCo3EKY3@cluster0.5des80y.mongodb.net/laboratory',console.log('db is connected'))
+
+const workerSchema = db.Schema({
+    id: Number,
+    full_name: String,
+    emploee_Level : String
+})
+
+const prodectSchema = db.Schema ({
+    historyOfTheProdect: Array,
+    location: Boolean,
+    flegLocation: Boolean,
+    catalogNumber: Number,
+    id: Number,
+    prodect_name: String,
+    ExamType: String,
+    faultHistory: Array,
+    faultHistoryFlag: Boolean,
+    checked: Boolean
+})
+
+const workweList = db.model('allWorkers' , workerSchema)
+const prodectsList = db.model('allProdects' , prodectSchema)
+
+app.get('/', (req, res) => {
+    let temp = [
+        {
+            id: '315855320',
+            full_name: 'zviel zamach',
+            emploee_Level: 'admin'
+        },
+        {
+            id: '322620048',
+            full_name: 'gal shmertz',
+            emploee_Level: 'vice principal'
+        },
+        {
+            id: '311128920',
+            full_name: 'ori tzadok',
+            emploee_Level: 'vice principal'
+        }
+    ]
+    const add = async() => {
+        let result = await workweList.find();
+        if(result.length == 0) {
+            await workweList.insertMany(temp)
+            res.send('workers are inserted')
+        }
+        
+    }
+    add(temp)
+})
+
+app.post('/' , (req , res) => {
+    const findUser = async() => {
+        let user = await workweList.findOne({full_name: req.body.name , id: req.body.id})
+        console.log(user);
+        if(user != null) {
+            res.json({
+                messeage : user.emploee_Level,
+                found: true
+            })
+        }
+        else {
+            res.json({
+                messeage: 'in_ValidUser',
+                found: false
+            })
+        }
+    }
+    findUser()
+})
+
+app.post('/addNewWorker' , (req , res) => {
+    let temp = {
+        id: req.body.id,
+        full_name: req.body.FullName,
+        emploee_Level: req.body.emploee_Level
+        }
+    const add = async() => {
+        let result = await workweList.findOne({id: req.body.id})
+        if(result == null) {
+            await workweList.insertMany(temp)
+            res.json({
+                messeage:'user not exsist'
+            })
+        }
+        else {
+            res.json({
+                messeage:'user exsist'
+            })
+        }
+    }
+    add()
+})
+
+app.get('/getAllWorkersAndProdects' , (req , res) => {
+    const getData = async() => {
+        let allTheWorkers = await workweList.find()
+        let allTheProdects = await prodectsList.find()
+        res.json({
+            allTheWorkers,
+            allTheProdects
+        })
+    }
+    getData()
+})
+
+app.post('/deleteUser' , (req , res) => {
+    const del = async() => {
+        await workweList.findOneAndRemove({id: req.body.id})
+        res.json({
+            messeage: 'deleted'
+        })
+        
+    }
+    del()
+})
+
+app.post('/addProdects' , (req , res) => {
+    const AddingAProdect = async() => {
+        let isProdectExsist = await prodectsList.findOne({id: req.body.idProdect})
+        if(isProdectExsist == null) {
+            await prodectsList.insertMany({location: req.body.location,flegLocation: false ,catalogNumber: req.body.CatalogNumber ,id: req.body.idProdect ,prodect_name: req.body.nameProdect ,ExamType: req.body.ExamType ,faultHistoryFlag: false ,checked: req.body.checked })
+            res.json({
+                messeage: 'added'
+            })
+        }
+        else {
+            res.json({
+                messeage: 'not added'
+            })
+        }
+    }
+    AddingAProdect()
+})
+
+app.post('/delProdect' ,(req , res) => {
+    const delpro = async() => {
+        let proToDel = await prodectsList.findOne({id: req.body.idProdect})
+        console.log(proToDel);
+        
+        if(proToDel != null) {
+            await prodectsList.deleteOne({id:req.body.idProdect})
+            res.json({
+                messeage: 'deleted'
+            })
+        }
+        else{
+            res.json({
+                messeage: 'not found'
+            })
+        }
+    }
+    delpro()
+})
+
+app.post('/delGroup' , (req , res) => {
+    const delGroup = async() => {
+        let groupToDel = await prodectsList.find({catalogNumber: req.body.CatalogNumber})
+        console.log(groupToDel);
+        if(groupToDel.length != 0) {
+            await prodectsList.deleteMany({catalogNumber: req.body.CatalogNumber})
+            res.json({
+                messeage: 'all group deleted'
+            })
+        }
+        else {
+            res.json({
+                messeage: 'not found'
+            })
+        }
+    }
+    delGroup()
+})
+
+app.post('/delAll' , (req , res) => {
+    const delAllPro = async() => {
+        await prodectsList.deleteMany()
+    }
+    delAllPro()
+})
+
+app.post ('/signOn' , (req, res) => {
+    let sign = {
+        name: req.body.fullName,
+        id: req.body.id,
+        personal_number: req.body.personal_number,
+        team: req.body.team,
+        time: req.body.time
+    }
+    const updateSign = async() => {
+        let findThePro = await prodectsList.findOneAndUpdate({id: req.body.pro_num}, {$push: {historyOfTheProdect: sign },location: true})
+        if(findThePro != null) {
+            res.json({
+                messeage: 'updated'
+            })
+        }
+        else {
+            res.json({
+                messeage: 'not updated'
+            })
+        }
+    }
+    updateSign()
+})
+
+app.post('/giveBack' , (req , res) => {
+    let ret = {
+        name: 'Armory',
+        time: req.body.time
+    }
+    console.log('hi');
+    console.log('Armory');
+    const retThePro = async() => {
+        let findThePro = await prodectsList.findOneAndUpdate({id: req.body.pro_num} , {$push: {historyOfTheProdect: ret } ,location: false})
+        if(findThePro != null) {
+            res.json({
+                messeage: 'The product has been returned'
+            })
+        }
+        else {
+            res.json({
+                messeage: 'not found'
+            })
+        }
+    }
+    retThePro()
+})
+
+app.post('/monthExam' , (req , res) => {
+    if(req.body.month == 'monthly') {
+        const monthExamType = async() => {
+            let TheExameType = await prodectsList.find({ExamType: 'monthly' , location: true})
+            if(TheExameType.length != 0) {
+                res.json({
+                    allpro: TheExameType
+                })
+            }
+        }
+        monthExamType()
+    }
+    else if(req.body.month == 'three months') {
+        console.log('three months');
+        
+        const threeMonthsExamType = async() => {
+            console.log('hihi');
+            
+            let TheExameType = await prodectsList.find({ExamType: 'monthly'})
+            let TheTreeMonthExameType = await prodectsList.find({ ExamType: 'three months'})
+            console.log(TheExameType);
+            console.log(TheTreeMonthExameType);
+            
+            
+            if(TheExameType.length != 0) {
+                res.json({
+                    allpro: TheExameType ,
+                    allThreePro: TheTreeMonthExameType
+                })
+            }
+        }
+        threeMonthsExamType()
+    }
+    else {
+        const annualMonthExamType = async() => {
+            let TheExameType = await prodectsList.find()
+            if(TheExameType.length != 0) {
+                res.json({
+                    allpro: TheExameType
+                })
+            }
+        }
+        annualMonthExamType()
+    }
+})
+
+app.post('/addFault' ,(req , res) => {
+    let fault = {
+        Description: req.body.fault, 
+        examinerName: req.body.examinerName,
+        date: req.body.date,
+        Rank: req.body.Rank
+    }
+    console.log(fault);
+    
+    const addfa = async() => {
+        console.log('hi');
+        
+        let findThePro = await prodectsList.findOneAndUpdate({id: req.body.id} , {$push: {faultHistory : fault} , checked : true})
+        console.log(findThePro);
+        
+        if(findThePro != null) {
+            res.json({
+                messeage: 'added'
+            })
+        }
+        else {
+            res.json({
+                messeage: 'not added'
+            })
+        }
+        
+    }
+    addfa()
+})
+
+app.post('/signChecked' ,(req , res) => {
+    const updatedpro = async() => {
+        let findThePro = await prodectsList.findOneAndUpdate({id : req.body.id} , {checked : true})
+        if(findThePro != null) {
+            res.json({
+                messeage: 'chenged'
+            })
+        }
+        else {
+            res.json({
+                messeage: 'not chenged'
+            })
+        }
+    }
+    updatedpro()
+})
+
+app.listen('3000' , () => {console.log('listen to port 3000');
+})
